@@ -22,7 +22,7 @@ Examples:
   score-hub search messaging
   score-hub search --category networking
   score-hub search --platform k8s
-  score-hub search              # list all provisioners`,
+  score-hub search              # list all provisioners grouped by category`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		query := ""
 		if len(args) > 0 {
@@ -41,12 +41,12 @@ Examples:
 		}
 
 		results := idx.Search(query, searchCategory, flagPlatform)
-		output.PrintSearchResults(results, flagJSON)
+		output.PrintSearchResults(results, query, flagJSON)
 		return nil
 	},
 }
 
 func init() {
 	searchCmd.Flags().StringVar(&searchCategory, "category", "",
-		"Filter by category (e.g., messaging, networking)")
+		"Filter by category (e.g., messaging, networking, ai, compute)")
 }

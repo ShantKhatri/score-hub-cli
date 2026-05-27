@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -11,17 +12,22 @@ import (
 	"github.com/score-hub/cli/internal/lockfile"
 )
 
-func PrintSearchResults(results []index.Provisioner, jsonOut bool) {
+func PrintSearchResults(results []index.Provisioner, query string, jsonOut bool) {
 	if jsonOut {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(results)
+		printSearchJSON(results)
 		return
 	}
 	if len(results) == 0 {
 		fmt.Println("No provisioners found.")
 		return
 	}
+
+	// If no query was provided, group by category
+	if query == "" {
+		printGroupedByCategory(results)
+		return
+	}
+
 	fmt.Printf("%-22s %-14s %-16s %-10s %s\n",
 		"NAME", "CATEGORY", "PLATFORMS", "VARIANTS", "VERSION")
 	fmt.Println(strings.Repeat("─", 75))
@@ -33,23 +39,91 @@ func PrintSearchResults(results []index.Provisioner, jsonOut bool) {
 	fmt.Printf("\n%d result(s). Run 'score-hub info <name>' for details.\n", len(results))
 }
 
-func PrintInfo(p *index.Provisioner) {
+func printGroupedByCategory(results []index.Provisioner) {
+	categories := make(map[string][]index.Provisioner)
+	var categoryOrder []string
+	for _, p := range results {
+		cat := p.Category
+		if cat == "" {
+			cat = "other"
+		}
+		if _, exists := categories[cat]; !exists {
+			categoryOrder = append(categoryOrder, cat)
+		}
+		categories[cat] = append(categories[cat], p)
+	}
+	sort.Strings(categoryOrder)
+
+	bold := color.New(color.Bold)
+	dim := color.New(color.Faint)
+
+	for i, cat := range categoryOrder {
+		if i > 0 {
+			fmt.Println()
+		}
+		bold.Printf("[%s]\n", cat)
+		for _, p := range categories[cat] {
+			platforms := strings.Join(p.PlatformNames(), ", ")
+			fmt.Printf("  %-22s %s", p.Name, p.DisplayName)
+			dim.Printf("  (%s)\n", platforms)
+		}
+	}
+	fmt.Printf("\n%d provisioner(s) available. Run 'score-hub info <name>' for details.\n", len(results))
+}
+
+func printSearchJSON(results []index.Provisioner) {
+	type searchResult struct {
+		Name         string   `json:"name"`
+		DisplayName  string   `json:"displayName"`
+		Category     string   `json:"category"`
+		Platforms    []string `json:"platforms"`
+		VariantCount int      `json:"variantCount"`
+		Version      string   `json:"latestVersion"`
+	}
+	var out []searchResult
+	for _, p := range results {
+		out = append(out, searchResult{
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Category:     p.Category,
+			Platforms:    p.PlatformNames(),
+			VariantCount: p.VariantCount(),
+			Version:      p.LatestVersion(),
+		})
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(out)
+}
+
+func PrintInfo(p *index.Provisioner, jsonOut bool) {
+	if jsonOut {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(p)
+		return
+	}
+
 	bold := color.New(color.Bold)
 	dim := color.New(color.Faint)
 	cyan := color.New(color.FgCyan)
 
 	bold.Printf("\n%s", p.Name)
-	dim.Printf(" v%s\n", p.LatestVersion())
+	dim.Printf(" — ")
 	cyan.Println(p.DisplayName)
-	fmt.Println()
 	fmt.Printf("Category:  %s\n", p.Category)
 	fmt.Printf("Platforms: %s\n", strings.Join(p.PlatformNames(), ", "))
 	fmt.Printf("Upstream:  %s\n", p.Upstream)
-	fmt.Printf("Updated:   %s\n", p.LatestDate())
+	fmt.Printf("Version:   %s (%s)\n", p.LatestVersion(), p.LatestDate())
 	fmt.Println()
+
 	bold.Println("DESCRIPTION")
-	fmt.Printf("  %s\n", p.Description)
+	lines := strings.Split(strings.TrimSpace(p.Description), "\n")
+	for _, line := range lines {
+		fmt.Printf("  %s\n", strings.TrimSpace(line))
+	}
 	fmt.Println()
+
 	bold.Println("VARIANTS")
 	for _, v := range p.Variants {
 		desc := v.Description
@@ -60,8 +134,16 @@ func PrintInfo(p *index.Provisioner) {
 		for pl := range v.Platforms {
 			plats = append(plats, pl)
 		}
-		fmt.Printf("  %-15s %s (%s)\n", v.ID, desc, strings.Join(plats, " + "))
+		sort.Strings(plats)
+		platStr := strings.Join(plats, ", ")
+
+		if len(plats) == 1 {
+			fmt.Printf("  %-15s %-40s %s only\n", v.ID, desc, plats[0])
+		} else {
+			fmt.Printf("  %-15s %-40s %s\n", v.ID, desc, platStr)
+		}
 	}
+
 	hasPrereqs := false
 	for _, v := range p.Variants {
 		if len(v.Prerequisites) > 0 {
@@ -82,11 +164,27 @@ func PrintInfo(p *index.Provisioner) {
 			}
 		}
 	}
+
+	fmt.Println()
+	bold.Println("USAGE IN score.yaml")
+	cyan.Printf("  resources:\n    my-resource:\n      type: %s\n", p.Name)
 	fmt.Println()
 	bold.Println("INSTALL")
 	for _, v := range p.Variants {
-		fmt.Printf("  score-hub install %s --variant %s\n", p.Name, v.ID)
+		var plats []string
+		for pl := range v.Platforms {
+			plats = append(plats, pl)
+		}
+		sort.Strings(plats)
+		platInfo := ""
+		if len(plats) == 1 {
+			platInfo = fmt.Sprintf("  (%s only)", plats[0])
+		} else {
+			platInfo = fmt.Sprintf("  (%s)", strings.Join(plats, " + "))
+		}
+		fmt.Printf("  score-hub install %s --variant %s%s\n", p.Name, v.ID, platInfo)
 	}
+
 	if len(p.Versions) > 0 {
 		fmt.Println()
 		bold.Println("VERSION HISTORY")
@@ -94,6 +192,9 @@ func PrintInfo(p *index.Provisioner) {
 			fmt.Printf("  %-8s  %-12s  %s\n", ver.Version, ver.Date, ver.Changelog)
 		}
 	}
+
+	fmt.Println()
+	dim.Printf("Upstream: https://github.com/%s/tree/main/%s\n", p.Upstream, p.Name)
 	fmt.Println()
 }
 
@@ -104,7 +205,7 @@ func PrintInstallSuccess(name, version, variant, platform, installPath, resType 
 
 	fmt.Println()
 	green.Printf("✓ Installed %s@%s (%s, %s)\n", name, version, variant, platform)
-	dim.Printf("→ %s\n", installPath)
+	dim.Printf("  → %s\n", installPath)
 	if resType != "" {
 		fmt.Println()
 		fmt.Println("Add to your score.yaml:")

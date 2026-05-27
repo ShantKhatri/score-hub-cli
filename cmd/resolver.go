@@ -6,7 +6,6 @@ import (
 	gh "github.com/score-hub/cli/internal/resolver/github"
 )
 
-// getResolver creates a resolver from config and flags
 func getResolver() (resolver.Resolver, error) {
 	cfg := config.Load()
 	res := gh.NewGitHubResolver(config.CacheDir())
@@ -18,5 +17,6 @@ func getResolver() (resolver.Resolver, error) {
 	}
 
 	res.EmbeddedIndex = getEmbeddedIndex()
+	res.Verbose = flagVerbose
 	return res, nil
 }

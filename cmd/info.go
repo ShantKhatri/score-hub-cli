@@ -16,7 +16,7 @@ variants, platforms, prerequisites, install commands, and version history.
 
 Examples:
   score-hub info dapr-pubsub
-  score-hub info route`,
+  score-hub info route --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -34,11 +34,11 @@ Examples:
 
 		prov := idx.FindProvisioner(name)
 		if prov == nil {
-			return fmt.Errorf("provisioner '%s' not found.\n"+
+			return fmt.Errorf("provisioner %q not found.\n"+
 				"Run 'score-hub search %s' to find similar provisioners", name, name)
 		}
 
-		output.PrintInfo(prov)
+		output.PrintInfo(prov, flagJSON)
 		return nil
 	},
 }
