@@ -1,6 +1,4 @@
 // Package github implements the Resolver interface backed by GitHub raw content.
-// It fetches the index from score-hub/index repo and provisioner files from
-// score-spec/community-provisioners, with local file caching.
 package github
 
 import (
@@ -21,9 +19,11 @@ const (
 	DefaultIndexURL        = "https://raw.githubusercontent.com/score-hub/index/main/index.yaml"
 	DefaultUpstreamBaseURL = "https://raw.githubusercontent.com/score-spec/community-provisioners/refs/heads/main/"
 	DefaultCacheTTL        = 1 * time.Hour
+
+	maxDownloadSize = 10 * 1024 * 1024
 )
 
-// GitHubResolver implements Resolver using GitHub
+// GitHubResolver implements Resolver using GitHub raw content URLs.
 type GitHubResolver struct {
 	IndexURL        string
 	UpstreamBaseURL string
@@ -31,10 +31,15 @@ type GitHubResolver struct {
 	CacheTTL        time.Duration
 	HTTPClient      *http.Client
 
+	// EmbeddedIndex is the index compiled into the binary via go:embed.
+	// Used as last-resort fallback when remote and cache both fail.
 	EmbeddedIndex []byte
+
+	// Verbose enables debug-level logging to stderr.
+	Verbose bool
 }
 
-// NewGitHubResolver returns a resolver with default settings
+// NewGitHubResolver returns a resolver with default settings.
 func NewGitHubResolver(cacheDir string) *GitHubResolver {
 	return &GitHubResolver{
 		IndexURL:        DefaultIndexURL,
@@ -47,45 +52,54 @@ func NewGitHubResolver(cacheDir string) *GitHubResolver {
 	}
 }
 
-// GetIndex fetches and parses the index, using cache when available
+// GetIndex fetches and parses the provisioner index.
 func (r *GitHubResolver) GetIndex(ctx context.Context, noCache bool) (*index.Index, error) {
-	if r.EmbeddedIndex != nil {
-		return index.Parse(r.EmbeddedIndex)
-	}
-
 	cachePath := filepath.Join(r.CacheDir, "index.yaml")
 
 	if !noCache {
 		if data, err := r.readCache(cachePath); err == nil {
+			r.debugf("Using cached index from %s", cachePath)
 			return index.Parse(data)
 		}
 	}
 
+	r.debugf("Fetching index from %s", r.IndexURL)
 	data, err := r.httpGet(ctx, r.IndexURL)
-	if err != nil {
-		if cachedData, cacheErr := os.ReadFile(cachePath); cacheErr == nil {
-			fmt.Fprintf(os.Stderr, "Warning: using cached index (network error: %v)\n", err)
-			return index.Parse(cachedData)
+	if err == nil {
+		// Cache the fresh index
+		if cacheErr := r.writeCache(cachePath, data); cacheErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to cache index: %v\n", cacheErr)
 		}
-		return nil, fmt.Errorf("failed to fetch index: %w", err)
+		return index.Parse(data)
 	}
 
-	if err := r.writeCache(cachePath, data); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to cache index: %v\n", err)
+	r.debugf("Remote fetch failed: %v", err)
+
+	if cachedData, cacheErr := os.ReadFile(cachePath); cacheErr == nil {
+		fmt.Fprintf(os.Stderr, "Warning: using cached index (network error: %v)\n", err)
+		return index.Parse(cachedData)
 	}
 
-	return index.Parse(data)
+	if r.EmbeddedIndex != nil {
+		r.debugf("Using embedded index as fallback")
+		fmt.Fprintf(os.Stderr, "Warning: using embedded index (network error: %v)\n", err)
+		return index.Parse(r.EmbeddedIndex)
+	}
+
+	return nil, fmt.Errorf("failed to fetch index: %w (no cache or embedded index available)", err)
 }
 
-// FetchFile downloads a provisioner file
+// FetchFile downloads a provisioner file from the upstream source.
 func (r *GitHubResolver) FetchFile(ctx context.Context, path string) ([]byte, error) {
-	return r.httpGet(ctx, r.UpstreamBaseURL+path)
+	url := r.UpstreamBaseURL + path
+	r.debugf("Fetching file from %s", url)
+	return r.httpGet(ctx, url)
 }
 
-// VerifyChecksum verifies SHA256 checksum in "sha256:hex" format
+// VerifyChecksum verifies SHA256 checksum in "sha256:hex" format.
 func VerifyChecksum(data []byte, expected string) error {
 	if len(expected) < 8 || expected[:7] != "sha256:" {
-		return fmt.Errorf("invalid checksum format: %s (expected sha256:hex)", expected)
+		return fmt.Errorf("invalid checksum format: %s (expected sha256:<hex>)", expected)
 	}
 
 	expectedHex := expected[7:]
@@ -93,19 +107,19 @@ func VerifyChecksum(data []byte, expected string) error {
 	actualHex := hex.EncodeToString(hash[:])
 
 	if actualHex != expectedHex {
-		return fmt.Errorf("checksum mismatch: expected %s, got sha256:%s", expected, actualHex)
+		return fmt.Errorf("checksum mismatch:\n  expected: %s\n  actual:   sha256:%s", expected, actualHex)
 	}
 
 	return nil
 }
 
-// ComputeChecksum computes SHA256 checksum
+// ComputeChecksum computes SHA256 checksum in "sha256:hex" format.
 func ComputeChecksum(data []byte) string {
 	hash := sha256.Sum256(data)
 	return "sha256:" + hex.EncodeToString(hash[:])
 }
 
-// httpGet performs HTTP GET
+// httpGet performs a bounded HTTP GET request.
 func (r *GitHubResolver) httpGet(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -124,7 +138,8 @@ func (r *GitHubResolver) httpGet(ctx context.Context, url string) ([]byte, error
 		return nil, fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// Limit read size to prevent memory exhaustion
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDownloadSize))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -132,7 +147,7 @@ func (r *GitHubResolver) httpGet(ctx context.Context, url string) ([]byte, error
 	return body, nil
 }
 
-// readCache retrieves cached data if not expired
+// readCache retrieves cached data if not expired.
 func (r *GitHubResolver) readCache(path string) ([]byte, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -144,10 +159,17 @@ func (r *GitHubResolver) readCache(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// writeCache saves data to cache directory
+// writeCache saves data to cache directory.
 func (r *GitHubResolver) writeCache(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// debugf prints debug output when verbose mode is enabled.
+func (r *GitHubResolver) debugf(format string, args ...interface{}) {
+	if r.Verbose {
+		fmt.Fprintf(os.Stderr, "[debug] "+format+"\n", args...)
+	}
 }
