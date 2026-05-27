@@ -1,0 +1,13 @@
+# score-hub lock file
+# Commit this to source control.
+
+apiVersion: score-hub/v1alpha1
+provisioners:
+    - name: dapr-pubsub
+      variant: redis
+      platform: compose
+      version: 1.0.0
+      commit: 1f479ccadaa06b652f64ebe6059ab315a2c4a1b6
+      filename: 10-redis-dapr-pubsub.provisioners.yaml
+      checksum: sha256:8434fbfd9203b071a7351e291b363b18fa6e0a33a972f6c325953e27f7c1c190
+      installedAt: "2026-05-26T11:52:46Z"
