@@ -21,7 +21,7 @@ type DetectedPlatform struct {
 	Source string // how it was detected (flag, env, config, directory, binary)
 }
 
-// DetectPlatform detects platform from: flag, env var, config, directories, or binaries in PATH
+// DetectPlatform detects platform from: flag, env var, config, directories, or binaries in PATH.
 func DetectPlatform(flagPlatform string, configPlatform string) (*DetectedPlatform, error) {
 	if flagPlatform != "" {
 		p := normalizePlatform(flagPlatform)
@@ -100,11 +100,12 @@ func Install(
 	configPlatform string,
 	version string,
 	skipConfirm bool,
+	noVerify bool,
 	targetDir string,
 ) (*InstallResult, error) {
 	prov := idx.FindProvisioner(provName)
 	if prov == nil {
-		return nil, fmt.Errorf("provisioner '%s' not found.\n"+
+		return nil, fmt.Errorf("provisioner %q not found.\n"+
 			"Run 'score-hub search %s' to find similar provisioners", provName, provName)
 	}
 
@@ -116,14 +117,14 @@ func Install(
 			for _, v := range prov.Variants {
 				available = append(available, v.ID)
 			}
-			return nil, fmt.Errorf("variant '%s' not found for provisioner '%s'.\n"+
+			return nil, fmt.Errorf("variant %q not found for provisioner %q.\n"+
 				"Available variants: %s", variantID, provName, strings.Join(available, ", "))
 		}
 	} else if len(prov.Variants) == 1 {
 		variant = &prov.Variants[0]
-		fmt.Printf("Auto-selected variant: %s\n", variant.ID)
+		fmt.Printf("Using variant: %s\n", variant.ID)
 	} else {
-		fmt.Printf("\nProvisioner '%s' has multiple variants:\n\n", prov.Name)
+		fmt.Printf("\n%s has %d variants:\n\n", prov.Name, len(prov.Variants))
 		for _, v := range prov.Variants {
 			desc := v.Description
 			if desc == "" {
@@ -135,8 +136,7 @@ func Install(
 			}
 			fmt.Printf("  %-15s %s (%s)\n", v.ID, desc, strings.Join(platforms, ", "))
 		}
-		fmt.Printf("\nSpecify a variant with --variant <name>\n")
-		fmt.Printf("Example: score-hub install %s --variant %s\n", prov.Name, prov.Variants[0].ID)
+		fmt.Printf("\nSpecify one: --variant %s\n", prov.Variants[0].ID)
 		return nil, fmt.Errorf("variant selection required")
 	}
 
@@ -151,12 +151,12 @@ func Install(
 		for p := range variant.Platforms {
 			available = append(available, p)
 		}
-		return nil, fmt.Errorf("variant '%s' does not support platform '%s' (available: %s)",
-			variant.ID, platform.Name, strings.Join(available, ", "))
+		return nil, fmt.Errorf("variant %q does not support platform %q.\n"+
+			"Supported: %s", variant.ID, platform.Name, strings.Join(available, ", "))
 	}
 
 	if len(variant.Prerequisites) > 0 && !skipConfirm {
-		fmt.Printf("Prerequisites for %s (%s, %s):\n", prov.Name, variant.ID, platform.Name)
+		fmt.Printf("\nPrerequisites for %s (%s, %s):\n", prov.Name, variant.ID, platform.Name)
 		for _, prereq := range variant.Prerequisites {
 			fmt.Printf("  • %s\n", prereq)
 		}
@@ -166,6 +166,23 @@ func Install(
 	ver := version
 	if ver == "" {
 		ver = prov.LatestVersion()
+	} else {
+		// Validate the requested version exists
+		found := false
+		for _, v := range prov.Versions {
+			if v.Version == ver {
+				found = true
+				break
+			}
+		}
+		if !found {
+			var available []string
+			for _, v := range prov.Versions {
+				available = append(available, v.Version)
+			}
+			return nil, fmt.Errorf("version %q not found for provisioner %q.\n"+
+				"Available versions: %s", ver, provName, strings.Join(available, ", "))
+		}
 	}
 
 	fmt.Printf("Downloading %s...\n", platformData.Filename)
@@ -174,11 +191,14 @@ func Install(
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
 
-	if platformData.Checksum != "" {
+	checksum := gh.ComputeChecksum(data)
+	if !noVerify && platformData.Checksum != "" {
 		if err := gh.VerifyChecksum(data, platformData.Checksum); err != nil {
-			return nil, fmt.Errorf("checksum verification failed: %w", err)
+			return nil, fmt.Errorf("%w\n"+
+				"Upstream file may have changed. Run 'score-hub search %s' to check for updates",
+				err, provName)
 		}
-		fmt.Println("Checksum verified.")
+		fmt.Println("✓ Checksum verified")
 	}
 
 	var installDir string
@@ -198,8 +218,7 @@ func Install(
 	if err := os.WriteFile(installPath, data, 0644); err != nil {
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
-	fmt.Printf("Installed to %s\n", installPath)
-	checksum := gh.ComputeChecksum(data)
+
 	lock, _ := lockfile.Load(".")
 	if lock == nil {
 		lock = lockfile.New()

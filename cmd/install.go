@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	installVariant string
-	installYes     bool
-	installDir     string
+	installVariant  string
+	installYes      bool
+	installDir      string
+	installNoVerify bool
 )
 
 var installCmd = &cobra.Command{
@@ -27,7 +28,8 @@ Examples:
   score-hub install dapr-pubsub --variant redis
   score-hub install dapr-pubsub --variant redis --platform k8s
   score-hub install dapr-pubsub@1.0.0 --variant redis
-  score-hub install route --variant ingress --yes`,
+  score-hub install route --variant ingress --yes
+  score-hub install environment --no-verify`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, version := parseNameVersion(args[0])
@@ -55,7 +57,7 @@ Examples:
 			ctx, res, idx,
 			name, installVariant,
 			flagPlatform, cfg.Platform,
-			version, installYes, installDir,
+			version, installYes, installNoVerify, installDir,
 		)
 		if err != nil {
 			return err
@@ -87,4 +89,6 @@ func init() {
 		"Skip confirmation prompts")
 	installCmd.Flags().StringVar(&installDir, "dir", "",
 		"Override install directory (default: auto-detect)")
+	installCmd.Flags().BoolVar(&installNoVerify, "no-verify", false,
+		"Skip checksum verification (not recommended)")
 }
