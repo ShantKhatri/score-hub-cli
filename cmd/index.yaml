@@ -21,7 +21,7 @@ provisioners:
           k8s:
             path: dapr-pubsub/score-k8s/10-rabbitmq-dapr-pubsub.provisioners.yaml
             filename: 10-rabbitmq-dapr-pubsub.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:9a18f40d24f2c049f6d173eef31f261a31044ee219c755f16bc6b037dc3b1ddc"
         prerequisites:
           - "Dapr installed in cluster (helm install dapr/dapr)"
       - id: redis
@@ -31,11 +31,11 @@ provisioners:
           k8s:
             path: dapr-pubsub/score-k8s/10-redis-dapr-pubsub.provisioners.yaml
             filename: 10-redis-dapr-pubsub.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:bd80a6bc4c960e40f7006474470578daf57c1d0337f893a618c3838743802c23"
           compose:
             path: dapr-pubsub/score-compose/10-redis-dapr-pubsub.provisioners.yaml
             filename: 10-redis-dapr-pubsub.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:8434fbfd9203b071a7351e291b363b18fa6e0a33a972f6c325953e27f7c1c190"
         prerequisites:
           - "Dapr installed in cluster (helm install dapr/dapr)"
     versions:
@@ -60,11 +60,11 @@ provisioners:
           k8s:
             path: dapr-state-store/score-k8s/10-redis-dapr-state-store.provisioners.yaml
             filename: 10-redis-dapr-state-store.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:fbfcd43dbe0fff9a6c677e56f1d96b85dabb6249445fa6454e029b24ffe53dcb"
           compose:
             path: dapr-state-store/score-compose/10-redis-dapr-state-store.provisioners.yaml
             filename: 10-redis-dapr-state-store.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:021ec097526b682328b24a901d95c2431da68875b34764b36ef8f8047b431dfb"
         prerequisites:
           - "Dapr installed in cluster (helm install dapr/dapr)"
     versions:
@@ -89,11 +89,11 @@ provisioners:
           k8s:
             path: dapr-subscription/score-k8s/10-dapr-subscription.provisioners.yaml
             filename: 10-dapr-subscription.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:29a6889df91af25e5181e97acafb5fdd2d9790c97e14b3b36bec50e65ba55128"
           compose:
             path: dapr-subscription/score-compose/10-dapr-subscription.provisioners.yaml
             filename: 10-dapr-subscription.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:605d435072d9dc2c22e2fa54d108fda46a16338bcb0fbc4f9991d3e38bb5456a"
     versions:
       - version: "1.0.0"
         date: "2026-05-01"
@@ -116,11 +116,11 @@ provisioners:
           k8s:
             path: dns/score-k8s/10-dns-in-codespace.provisioners.yaml
             filename: 10-dns-in-codespace.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:248ace71f4ea5c5bddc40e15a9d1593ef414ec559198340a75a58dbb1a8d14d6"
           compose:
             path: dns/score-compose/10-dns-in-codespace.provisioners.yaml
             filename: 10-dns-in-codespace.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:41e0eeb3e5f42441b2224bb5ea8769759565cc88c29eddd08d9297ea89978f9b"
       - id: url
         displayName: "URL-based DNS"
         description: "DNS configuration with custom URL"
@@ -128,11 +128,11 @@ provisioners:
           k8s:
             path: dns/score-k8s/10-dns-with-url.provisioners.yaml
             filename: 10-dns-with-url.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:f5992e39f826523b63cb4d5cf039a12356c989fdc5bc19989ecebce5cceb7efb"
           compose:
             path: dns/score-compose/10-dns-with-url.provisioners.yaml
             filename: 10-dns-with-url.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:18184887ee9a4eab3cbf28b55508fcb744056c2342ae409045c83a008d684ce1"
     versions:
       - version: "1.0.0"
         date: "2026-05-01"
@@ -155,11 +155,11 @@ provisioners:
           k8s:
             path: environment/score-k8s/10-env.provisioners.yaml
             filename: 10-env.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:4bca090c95735bd0d6f18511546e111e1a6e4c3d14baff5623174fa8d0fce87f"
           compose:
             path: environment/score-compose/10-env.provisioners.yaml
             filename: 10-env.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:4bca090c95735bd0d6f18511546e111e1a6e4c3d14baff5623174fa8d0fce87f"
     versions:
       - version: "1.0.0"
         date: "2026-05-01"
@@ -182,7 +182,7 @@ provisioners:
           compose:
             path: gcp-pubsub-emulator/score-compose/10-gcp-pubsub-emulator.provisioners.yaml
             filename: 10-gcp-pubsub-emulator.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:010ab36393d13153f306b2913f775c8e44bdbc6435d277a87c5e0d6c2e129960"
         prerequisites:
           - "Docker Compose running"
     versions:
@@ -207,11 +207,11 @@ provisioners:
           k8s:
             path: horizontal-pod-autoscaler/score-k8s/10-hpa.provisioners.yaml
             filename: 10-hpa.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:d3ed8d6e7460d4b60f1d93f311f168da1b76b124513f8eb21504242666bb597d"
           compose:
             path: horizontal-pod-autoscaler/score-compose/10-hpa.provisioners.yaml
             filename: 10-hpa.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:3b85369077867d9dc7e1f9ffbfc075c758d1142d377081ed5c7fbcaec3763bd7"
     versions:
       - version: "1.0.0"
         date: "2026-05-01"
@@ -234,7 +234,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-dmr-llm-model.provisioners.yaml
             filename: 10-dmr-llm-model.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:e9a14d7a0b46e9703d0b200d4147c330fa0c6a22eb09b35d234c52ac26671889"
         prerequisites:
           - "Docker Model Runner enabled (docker desktop settings)"
       - id: dmr-openai
@@ -244,7 +244,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-dmr-llm-model-for-openai-clients.provisioners.yaml
             filename: 10-dmr-llm-model-for-openai-clients.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:d00068492dfb2fa054ea2f9eb174d929b6ff6e4ff9fc9c754c72c83d569bcb8f"
         prerequisites:
           - "Docker Model Runner enabled"
       - id: dmr-curl-cmd
@@ -254,7 +254,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-dmr-llm-model-via-curl-cmd.provisioners.yaml
             filename: 10-dmr-llm-model-via-curl-cmd.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:b747b68f12b8e75ec98fdf86ee356701efe4fddda399f70677af25e577b599b3"
         prerequisites:
           - "Docker Model Runner enabled"
       - id: dmr-curl-service
@@ -264,7 +264,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-dmr-llm-model-via-curl-service.provisioners.yaml
             filename: 10-dmr-llm-model-via-curl-service.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:70d5c27f1eeee74c3e7dadac6dad4e125c33f038fb6e4c5a9079747c4acd823d"
         prerequisites:
           - "Docker Model Runner enabled"
       - id: dmr-service-provider
@@ -274,7 +274,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-dmr-llm-model-via-service-provider.provisioners.yaml
             filename: 10-dmr-llm-model-via-service-provider.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:d3f421ce03f12a624ee96d57ed53fab884a1e0d03ec83598ec45c437f48d5d32"
         prerequisites:
           - "Docker Model Runner enabled"
       - id: ollama
@@ -284,7 +284,7 @@ provisioners:
           compose:
             path: llm-model/score-compose/10-ollama-llm-model-service.provisioners.yaml
             filename: 10-ollama-llm-model-service.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:11afce74116263e299e22db5d7901dd69bf5d31c0847462fe6b4a3a2103ab5b7"
         prerequisites:
           - "Docker Compose running"
     versions:
@@ -309,7 +309,7 @@ provisioners:
           k8s:
             path: redis/score-k8s/10-redis-helm-template.provisioners.yaml
             filename: 10-redis-helm-template.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:37b658df8ccc965a210379c5e05f367535a6b050a20fb2acaf963aca6e16e163"
         prerequisites:
           - "helm CLI installed"
           - "yq CLI installed"
@@ -320,7 +320,7 @@ provisioners:
           k8s:
             path: redis/score-k8s/10-redis-helm-upgrade.provisioners.yaml
             filename: 10-redis-helm-upgrade.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:76a58920c49540b37f6e1160a3062123e5d196f746cf07bc96597d8a06cfc203"
         prerequisites:
           - "helm CLI installed"
     versions:
@@ -345,7 +345,7 @@ provisioners:
           k8s:
             path: route/score-k8s/10-ingress-route.provisioners.yaml
             filename: 10-ingress-route.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:52d0ad29afc37adff0568d01451f582867f61dfa06c9dafda84af95da70d674c"
       - id: ingress-netpol
         displayName: "Ingress with NetworkPolicy"
         description: "Ingress route with NetworkPolicy for isolation"
@@ -353,7 +353,7 @@ provisioners:
           k8s:
             path: route/score-k8s/10-ingress-with-netpol-route.provisioners.yaml
             filename: 10-ingress-with-netpol-route.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:ed2b042584f00d1f806a8687056939d0837b99d043d47573144864dbeca05fbd"
       - id: gateway-httproute
         displayName: "Gateway API HTTPRoute"
         description: "Route via Gateway API shared gateway"
@@ -361,7 +361,7 @@ provisioners:
           k8s:
             path: route/score-k8s/10-shared-gateway-httproute.provisioners.yaml
             filename: 10-shared-gateway-httproute.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:d1a7099928b4145eb46c0b7c59b67b1cea9603ad77616ee333d3c0f5ae91a001"
         prerequisites:
           - "Gateway API CRDs installed in cluster"
       - id: gateway-httproute-netpol
@@ -371,7 +371,7 @@ provisioners:
           k8s:
             path: route/score-k8s/10-shared-gateway-httproute-with-netpol.provisioners.yaml
             filename: 10-shared-gateway-httproute-with-netpol.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:bdae1837f5032065635634af9cc7d8bd17194854fff296bf08edadcaacf56f92"
         prerequisites:
           - "Gateway API CRDs installed in cluster"
     versions:
@@ -396,11 +396,11 @@ provisioners:
           k8s:
             path: service/score-k8s/10-service.provisioners.yaml
             filename: 10-service.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:53059e97c8e5baf5eae16edf11114a3b0b21c5a6797f77b456440895d44cfd6b"
           compose:
             path: service/score-compose/10-service.provisioners.yaml
             filename: 10-service.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:a386747730afb446f19dc24d5f3faf3a0e5e71b1436233d79d786381cdb6c5f6"
       - id: microcks
         displayName: "With Microcks"
         description: "Service dependency with Microcks API mocking"
@@ -408,7 +408,7 @@ provisioners:
           compose:
             path: service/score-compose/10-service-with-microcks.provisioners.yaml
             filename: 10-service-with-microcks.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:955f16d4b6e633a5a0fd82d4c8b1a4c00a9f268211afb8938d9d91a89a01f366"
         prerequisites:
           - "Microcks CLI installed"
       - id: microcks-cli
@@ -418,7 +418,7 @@ provisioners:
           k8s:
             path: service/score-k8s/10-service-with-microcks-cli.provisioners.yaml
             filename: 10-service-with-microcks-cli.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:8112c0a0df9f447427f0fab21079e8411c93034cd93612a40115255a33dcde3c"
         prerequisites:
           - "Microcks CLI installed"
       - id: netpol
@@ -428,7 +428,7 @@ provisioners:
           k8s:
             path: service/score-k8s/10-service-with-netpol.provisioners.yaml
             filename: 10-service-with-netpol.provisioners.yaml
-            checksum: ""
+            checksum: "sha256:3994c47ed7890d0179356ab373b34ae72e884bd9b5a357accfe27db0d6a9813c"
     versions:
       - version: "1.0.0"
         date: "2026-05-01"
