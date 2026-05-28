@@ -147,8 +147,6 @@ score-hub uses a **Resolver** interface abstraction that decouples CLI commands 
 
 ```
 score-hub CLI → Resolver Interface → GitHub (community-provisioners)
-                                   → Local (v0.2)
-                                   → HTTP API (v0.3)
 ```
 
 ## Building from Source
