@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/score-hub/cli/internal/index"
+	"github.com/ShantKhatri/score-hub-cli/internal/index"
 )
 
 const (

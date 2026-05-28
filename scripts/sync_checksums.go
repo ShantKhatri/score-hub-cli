@@ -14,8 +14,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/score-hub/cli/internal/index"
-	gh "github.com/score-hub/cli/internal/resolver/github"
+	"github.com/ShantKhatri/score-hub-cli/internal/index"
+	gh "github.com/ShantKhatri/score-hub-cli/internal/resolver/github"
 )
 
 func main() {

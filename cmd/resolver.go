@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/score-hub/cli/internal/config"
-	"github.com/score-hub/cli/internal/resolver"
-	gh "github.com/score-hub/cli/internal/resolver/github"
+	"github.com/ShantKhatri/score-hub-cli/internal/config"
+	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
+	gh "github.com/ShantKhatri/score-hub-cli/internal/resolver/github"
 )
 
 func getResolver() (resolver.Resolver, error) {

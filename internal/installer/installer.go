@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/score-hub/cli/internal/index"
-	"github.com/score-hub/cli/internal/lockfile"
-	"github.com/score-hub/cli/internal/resolver"
-	gh "github.com/score-hub/cli/internal/resolver/github"
+	"github.com/ShantKhatri/score-hub-cli/internal/index"
+	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
+	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
+	gh "github.com/ShantKhatri/score-hub-cli/internal/resolver/github"
 )
 
 // DetectedPlatform represents a detected Score platform

@@ -1,7 +1,7 @@
 BINARY_NAME=score-hub
 VERSION=0.1.0
 BUILD_DIR=bin
-LDFLAGS=-ldflags "-X github.com/score-hub/cli/cmd.Version=$(VERSION)"
+LDFLAGS=-ldflags "-X github.com/ShantKhatri/score-hub-cli/cmd.Version=$(VERSION)"
 
 .PHONY: build clean test install
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/score-hub/cli/internal/index"
-	"github.com/score-hub/cli/internal/lockfile"
+	"github.com/ShantKhatri/score-hub-cli/internal/index"
+	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
 )
 
 func PrintSearchResults(results []index.Provisioner, query string, jsonOut bool) {

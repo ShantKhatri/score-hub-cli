@@ -1,6 +1,6 @@
 package main
 
-import "github.com/score-hub/cli/cmd"
+import "github.com/ShantKhatri/score-hub-cli/cmd"
 
 func main() {
 	cmd.Execute()

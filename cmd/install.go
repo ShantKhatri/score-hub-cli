@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/score-hub/cli/internal/config"
-	"github.com/score-hub/cli/internal/installer"
-	"github.com/score-hub/cli/internal/output"
+	"github.com/ShantKhatri/score-hub-cli/internal/config"
+	"github.com/ShantKhatri/score-hub-cli/internal/installer"
+	"github.com/ShantKhatri/score-hub-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

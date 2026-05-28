@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/score-hub/cli/internal/index"
-	"github.com/score-hub/cli/internal/lockfile"
-	"github.com/score-hub/cli/internal/output"
+	"github.com/ShantKhatri/score-hub-cli/internal/index"
+	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
+	"github.com/ShantKhatri/score-hub-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
