@@ -22,6 +22,7 @@ type DetectedPlatform struct {
 }
 
 // DetectPlatform detects platform from: flag, env var, config, directories, or binaries in PATH.
+// TODO: This is broken currently
 func DetectPlatform(flagPlatform string, configPlatform string) (*DetectedPlatform, error) {
 	if flagPlatform != "" {
 		p := normalizePlatform(flagPlatform)
