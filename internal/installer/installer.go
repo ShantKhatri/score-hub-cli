@@ -224,14 +224,15 @@ func Install(
 		lock = lockfile.New()
 	}
 	lock.AddEntry(lockfile.LockEntry{
-		Name:        prov.Name,
-		Variant:     variant.ID,
-		Platform:    platform.Name,
-		Version:     ver,
-		Commit:      prov.LatestCommit(),
-		Filename:    platformData.Filename,
-		Checksum:    checksum,
-		InstalledAt: index.NowISO(),
+		Name:          prov.Name,
+		Variant:       variant.ID,
+		Platform:      platform.Name,
+		Version:       ver,
+		Commit:        prov.LatestCommit(),
+		InstalledFile: installPath,
+		Filename:      platformData.Filename,
+		Checksum:      checksum,
+		InstalledAt:   index.NowISO(),
 	})
 	if err := lock.Save("."); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to update lock file: %v\n", err)

@@ -12,23 +12,26 @@ const LockFileName = ".score-hub.lock"
 
 type LockFile struct {
 	APIVersion string      `yaml:"apiVersion"`
-	Entries    []LockEntry `yaml:"provisioners"`
+	Kind       string      `yaml:"kind"`
+	Entries    []LockEntry `yaml:"entries"`
 }
 
 type LockEntry struct {
-	Name        string `yaml:"name"`
-	Variant     string `yaml:"variant"`
-	Platform    string `yaml:"platform"`
-	Version     string `yaml:"version"`
-	Commit      string `yaml:"commit,omitempty"`
-	Filename    string `yaml:"filename"`
-	Checksum    string `yaml:"checksum"`
-	InstalledAt string `yaml:"installedAt"`
+	Name          string `yaml:"name"`
+	Variant       string `yaml:"variant"`
+	Platform      string `yaml:"platform"`
+	Version       string `yaml:"version"`
+	Commit        string `yaml:"commit,omitempty"`
+	InstalledFile string `yaml:"installedFile"`
+	Filename      string `yaml:"filename"`
+	Checksum      string `yaml:"checksum"`
+	InstalledAt   string `yaml:"installedAt"`
 }
 
 func New() *LockFile {
 	return &LockFile{
 		APIVersion: "score-hub/v1alpha1",
+		Kind:       "LockFile",
 		Entries:    []LockEntry{},
 	}
 }

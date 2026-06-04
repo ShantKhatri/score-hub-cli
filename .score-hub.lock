@@ -2,12 +2,14 @@
 # Commit this to source control.
 
 apiVersion: score-hub/v1alpha1
-provisioners:
+kind: LockFile
+entries:
     - name: dapr-pubsub
       variant: redis
-      platform: compose
+      platform: k8s
       version: 1.0.0
       commit: 1f479ccadaa06b652f64ebe6059ab315a2c4a1b6
+      installedFile: .score-k8s/10-redis-dapr-pubsub.provisioners.yaml
       filename: 10-redis-dapr-pubsub.provisioners.yaml
-      checksum: sha256:8434fbfd9203b071a7351e291b363b18fa6e0a33a972f6c325953e27f7c1c190
-      installedAt: "2026-05-26T11:52:46Z"
+      checksum: sha256:bd80a6bc4c960e40f7006474470578daf57c1d0337f893a618c3838743802c23
+      installedAt: "2026-06-04T19:57:47Z"
