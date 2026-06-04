@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	DefaultIndexURL        = "https://raw.githubusercontent.com/score-hub/index/main/index.yaml"
-	DefaultUpstreamBaseURL = "https://raw.githubusercontent.com/score-spec/community-provisioners/refs/heads/main/"
+	DefaultIndexURL        = "https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml"
+	DefaultUpstreamBaseURL = "https://raw.githubusercontent.com/score-spec/community-provisioners/main/"
 	DefaultCacheTTL        = 1 * time.Hour
 
 	maxDownloadSize = 10 * 1024 * 1024

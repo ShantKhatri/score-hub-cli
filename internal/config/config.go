@@ -28,7 +28,7 @@ func DefaultConfig() *Config {
 	homeDir := ScoreHubDir()
 	return &Config{
 		APIVersion: "score-hub/v1alpha1",
-		Registry:   "https://raw.githubusercontent.com/score-hub/index/main/index.yaml",
+		Registry:   "https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml",
 		Platform:   "auto",
 		Cache: CacheConfig{
 			TTL: "1h",

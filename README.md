@@ -7,7 +7,7 @@ Replace 140-character raw GitHub URLs with a single install command.
 ```bash
 # Before score-hub:
 score-k8s init --provisioners \
-  https://raw.githubusercontent.com/score-spec/community-provisioners/refs/heads/main/dapr-pubsub/score-k8s/10-redis-dapr-pubsub.provisioners.yaml
+  https://raw.githubusercontent.com/score-spec/community-provisioners/main/dapr-pubsub/score-k8s/10-redis-dapr-pubsub.provisioners.yaml
 
 # After score-hub:
 score-hub install dapr-pubsub --variant redis
@@ -108,7 +108,7 @@ Optional config at `~/.score-hub/config.yaml`:
 
 ```yaml
 apiVersion: score-hub/v1alpha1
-registry: https://raw.githubusercontent.com/score-hub/index/main/index.yaml
+registry: https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml
 platform: auto  # k8s | compose | auto
 cache:
   ttl: 1h
