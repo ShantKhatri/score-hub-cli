@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ShantKhatri/score-hub-cli/internal/output"
+	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
 	"github.com/spf13/cobra"
 )
 
@@ -35,13 +35,15 @@ Examples:
 		}
 
 		ctx := context.Background()
-		idx, err := res.GetIndex(ctx, flagNoCache)
+		results, err := res.Search(ctx, query, resolver.SearchOpts{
+			Category: searchCategory,
+			Platform: flagPlatform,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to load index: %w", err)
+			return err
 		}
 
-		results := idx.Search(query, searchCategory, flagPlatform)
-		output.PrintSearchResults(results, query, flagJSON)
+		output.PrintSearchResultsSummary(results, query, flagJSON)
 		return nil
 	},
 }

@@ -40,11 +40,6 @@ Examples:
 		}
 
 		ctx := context.Background()
-		idx, err := res.GetIndex(ctx, flagNoCache)
-		if err != nil {
-			return fmt.Errorf("failed to load index: %w", err)
-		}
-
 		cfg := config.Load()
 
 		ver := version
@@ -54,7 +49,7 @@ Examples:
 		fmt.Printf("Resolving %s@%s...\n", name, ver)
 
 		result, err := installer.Install(
-			ctx, res, idx,
+			ctx, res,
 			name, installVariant,
 			flagPlatform, cfg.Platform,
 			version, installYes, installNoVerify, installDir,

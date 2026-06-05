@@ -27,13 +27,8 @@ Examples:
 		}
 
 		ctx := context.Background()
-		idx, err := res.GetIndex(ctx, flagNoCache)
+		prov, err := res.Resolve(ctx, name)
 		if err != nil {
-			return fmt.Errorf("failed to load index: %w", err)
-		}
-
-		prov := idx.FindProvisioner(name)
-		if prov == nil {
 			return fmt.Errorf("provisioner %q not found.\n"+
 				"Run 'score-hub search %s' to find similar provisioners", name, name)
 		}

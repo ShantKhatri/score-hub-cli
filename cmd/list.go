@@ -31,7 +31,7 @@ Examples:
 		res, resErr := getResolver()
 		if resErr == nil {
 			ctx := context.Background()
-			if loadedIdx, loadErr := res.GetIndex(ctx, false); loadErr == nil {
+			if loadedIdx, loadErr := res.Index(ctx); loadErr == nil {
 				idx = loadedIdx
 			}
 		}

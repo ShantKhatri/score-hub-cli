@@ -1,4 +1,4 @@
-// Package installer handles platform detection, downloads, checksums, and file placement.
+// installer handles platform detection, downloads, checksums, and file placement.
 package installer
 
 import (
@@ -79,7 +79,6 @@ func DetectPlatform(flagPlatform string, configPlatform string) (*DetectedPlatfo
 		"Install score-k8s or score-compose first, or use --platform k8s|compose")
 }
 
-// InstallResult holds the result of a successful installation
 type InstallResult struct {
 	ProvisionerName string
 	Variant         string
@@ -90,11 +89,9 @@ type InstallResult struct {
 	Checksum        string
 }
 
-// Install resolves provisioner, detects platform, fetches file, verifies checksum, and updates lock file.
 func Install(
 	ctx context.Context,
 	res resolver.Resolver,
-	idx *index.Index,
 	provName string,
 	variantID string,
 	flagPlatform string,
@@ -104,8 +101,9 @@ func Install(
 	noVerify bool,
 	targetDir string,
 ) (*InstallResult, error) {
-	prov := idx.FindProvisioner(provName)
-	if prov == nil {
+	// Use the resolver to find the provisioner
+	prov, err := res.Resolve(ctx, provName)
+	if err != nil {
 		return nil, fmt.Errorf("provisioner %q not found.\n"+
 			"Run 'score-hub search %s' to find similar provisioners", provName, provName)
 	}
@@ -187,12 +185,11 @@ func Install(
 	}
 
 	fmt.Printf("Downloading %s...\n", platformData.Filename)
-	data, err := res.FetchFile(ctx, platformData.Path)
+	data, checksum, err := res.FetchFile(ctx, prov, variant.ID, platform.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
 
-	checksum := gh.ComputeChecksum(data)
 	if !noVerify && platformData.Checksum != "" {
 		if err := gh.VerifyChecksum(data, platformData.Checksum); err != nil {
 			return nil, fmt.Errorf("%w\n"+
