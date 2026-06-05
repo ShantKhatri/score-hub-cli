@@ -31,7 +31,6 @@ type ProvisionerSummary struct {
 }
 
 type Resolver interface {
-	// TODO: Implementation is remaining for these below methods
 	Index(ctx context.Context) (*index.Index, error)
 	Search(ctx context.Context, query string, opts SearchOpts) ([]ProvisionerSummary, error)
 	Resolve(ctx context.Context, name string) (*index.Provisioner, error)

@@ -1,4 +1,3 @@
-// Package github implements the Resolver interface backed by GitHub raw content.
 package github
 
 import (
@@ -9,29 +8,27 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/ShantKhatri/score-hub-cli/internal/cache"
 	"github.com/ShantKhatri/score-hub-cli/internal/index"
+	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
 )
 
 const (
 	DefaultIndexURL        = "https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml"
 	DefaultUpstreamBaseURL = "https://raw.githubusercontent.com/score-spec/community-provisioners/main/"
-	DefaultCacheTTL        = 1 * time.Hour
 
 	maxDownloadSize = 10 * 1024 * 1024
 )
 
-// GitHubResolver implements Resolver using GitHub raw content URLs.
 type GitHubResolver struct {
 	IndexURL        string
 	UpstreamBaseURL string
-	CacheDir        string
-	CacheTTL        time.Duration
 	HTTPClient      *http.Client
+	Cache           *cache.Cache
 
-	// EmbeddedIndex is the index compiled into the binary via go:embed.
 	// Used as last-resort fallback when remote and cache both fail.
 	EmbeddedIndex []byte
 
@@ -39,26 +36,24 @@ type GitHubResolver struct {
 	Verbose bool
 }
 
-// NewGitHubResolver returns a resolver with default settings.
-func NewGitHubResolver(cacheDir string) *GitHubResolver {
+func NewGitHubResolver(c *cache.Cache) *GitHubResolver {
 	return &GitHubResolver{
 		IndexURL:        DefaultIndexURL,
 		UpstreamBaseURL: DefaultUpstreamBaseURL,
-		CacheDir:        cacheDir,
-		CacheTTL:        DefaultCacheTTL,
+		Cache:           c,
 		HTTPClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 }
 
-// GetIndex fetches and parses the provisioner index.
-func (r *GitHubResolver) GetIndex(ctx context.Context, noCache bool) (*index.Index, error) {
-	cachePath := filepath.Join(r.CacheDir, "index.yaml")
+func (r *GitHubResolver) Index(ctx context.Context) (*index.Index, error) {
+	cacheKey := "index:" + r.IndexURL
 
-	if !noCache {
-		if data, err := r.readCache(cachePath); err == nil {
-			r.debugf("Using cached index from %s", cachePath)
+	// Try cache first
+	if r.Cache != nil {
+		if data, err := r.Cache.Get(cacheKey); err == nil {
+			r.debugf("Using cached index for %s", r.IndexURL)
 			return index.Parse(data)
 		}
 	}
@@ -67,17 +62,21 @@ func (r *GitHubResolver) GetIndex(ctx context.Context, noCache bool) (*index.Ind
 	data, err := r.httpGet(ctx, r.IndexURL)
 	if err == nil {
 		// Cache the fresh index
-		if cacheErr := r.writeCache(cachePath, data); cacheErr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to cache index: %v\n", cacheErr)
+		if r.Cache != nil {
+			if cacheErr := r.Cache.Set(cacheKey, data); cacheErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to cache index: %v\n", cacheErr)
+			}
 		}
 		return index.Parse(data)
 	}
 
 	r.debugf("Remote fetch failed: %v", err)
 
-	if cachedData, cacheErr := os.ReadFile(cachePath); cacheErr == nil {
-		fmt.Fprintf(os.Stderr, "Warning: using cached index (network error: %v)\n", err)
-		return index.Parse(cachedData)
+	if r.Cache != nil {
+		if cachedData, cacheErr := r.Cache.Get(cacheKey); cacheErr == nil {
+			fmt.Fprintf(os.Stderr, "Warning: using cached index (network error: %v)\n", err)
+			return index.Parse(cachedData)
+		}
 	}
 
 	if r.EmbeddedIndex != nil {
@@ -89,11 +88,89 @@ func (r *GitHubResolver) GetIndex(ctx context.Context, noCache bool) (*index.Ind
 	return nil, fmt.Errorf("failed to fetch index: %w (no cache or embedded index available)", err)
 }
 
-// FetchFile downloads a provisioner file from the upstream source.
-func (r *GitHubResolver) FetchFile(ctx context.Context, path string) ([]byte, error) {
-	url := r.UpstreamBaseURL + path
-	r.debugf("Fetching file from %s", url)
-	return r.httpGet(ctx, url)
+func (r *GitHubResolver) Search(ctx context.Context, query string, opts resolver.SearchOpts) ([]resolver.ProvisionerSummary, error) {
+	idx, err := r.Index(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	results := idx.Search(query, opts.Category, opts.Platform)
+
+	summaries := make([]resolver.ProvisionerSummary, len(results))
+	for i, p := range results {
+		summaries[i] = resolver.ProvisionerSummary{
+			Name:        p.Name,
+			DisplayName: p.DisplayName,
+			Category:    p.Category,
+			Platforms:   p.PlatformNames(),
+			Variants:    p.VariantCount(),
+			Version:     p.LatestVersion(),
+			Description: p.Description,
+		}
+	}
+	return summaries, nil
+}
+
+// Resolve looks up a provisioner by exact name.
+func (r *GitHubResolver) Resolve(ctx context.Context, name string) (*index.Provisioner, error) {
+	idx, err := r.Index(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	p := idx.FindProvisioner(name)
+	if p == nil {
+		return nil, resolver.ErrNotFound
+	}
+	return p, nil
+}
+
+func (r *GitHubResolver) ResolveVersion(ctx context.Context, name, version string) (*index.Provisioner, error) {
+	p, err := r.Resolve(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range p.Versions {
+		if v.Version == version {
+			return p, nil
+		}
+	}
+	return nil, fmt.Errorf("version %q not found for provisioner %q", version, name)
+}
+
+func (r *GitHubResolver) FetchFile(ctx context.Context, p *index.Provisioner, variant, platform string) ([]byte, string, error) {
+	v := p.FindVariant(variant)
+	if v == nil {
+		return nil, "", fmt.Errorf("%w: variant %q not found for provisioner %q",
+			resolver.ErrVariantNotFound, variant, p.Name)
+	}
+
+	plat, ok := v.Platforms[platform]
+	if !ok {
+		return nil, "", fmt.Errorf("%w: platform %q not supported for variant %q of %q",
+			resolver.ErrPlatformNotFound, platform, variant, p.Name)
+	}
+
+	// Determine the URL to fetch from
+	var fileURL string
+	if plat.DownloadURL != "" {
+		fileURL = plat.DownloadURL
+	} else if plat.Path != "" {
+		fileURL = r.UpstreamBaseURL + plat.Path
+	} else {
+		return nil, "", fmt.Errorf("provisioner %s/%s/%s: no downloadURL or path configured",
+			p.Name, variant, platform)
+	}
+
+	r.debugf("Fetching file from %s", fileURL)
+	data, err := r.httpGet(ctx, fileURL)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to download file: %w", err)
+	}
+
+	checksum := ComputeChecksum(data)
+	return data, checksum, nil
 }
 
 // VerifyChecksum verifies SHA256 checksum in "sha256:hex" format.
@@ -107,19 +184,18 @@ func VerifyChecksum(data []byte, expected string) error {
 	actualHex := hex.EncodeToString(hash[:])
 
 	if actualHex != expectedHex {
-		return fmt.Errorf("checksum mismatch:\n  expected: %s\n  actual:   sha256:%s", expected, actualHex)
+		return fmt.Errorf("%w:\n  expected: %s\n  actual:   sha256:%s",
+			resolver.ErrChecksumMismatch, expected, actualHex)
 	}
 
 	return nil
 }
 
-// ComputeChecksum computes SHA256 checksum in "sha256:hex" format.
 func ComputeChecksum(data []byte) string {
 	hash := sha256.Sum256(data)
 	return "sha256:" + hex.EncodeToString(hash[:])
 }
 
-// httpGet performs a bounded HTTP GET request.
 func (r *GitHubResolver) httpGet(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -147,29 +223,18 @@ func (r *GitHubResolver) httpGet(ctx context.Context, url string) ([]byte, error
 	return body, nil
 }
 
-// readCache retrieves cached data if not expired.
-func (r *GitHubResolver) readCache(path string) ([]byte, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if time.Since(info.ModTime()) > r.CacheTTL {
-		return nil, fmt.Errorf("cache expired")
-	}
-	return os.ReadFile(path)
-}
-
-// writeCache saves data to cache directory.
-func (r *GitHubResolver) writeCache(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
-// debugf prints debug output when verbose mode is enabled.
 func (r *GitHubResolver) debugf(format string, args ...interface{}) {
 	if r.Verbose {
 		fmt.Fprintf(os.Stderr, "[debug] "+format+"\n", args...)
 	}
+}
+
+// If the value starts with http:// or https://, it's treated as a direct URL.
+// Otherwise, it's treated as an alias, but GitHubResolver doesn't handle aliases,
+// so this returns the value as-is for the caller to resolve.
+func ResolveRegistryFlag(value string) (url string, isAlias bool) {
+	if strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") {
+		return value, false
+	}
+	return value, true
 }
