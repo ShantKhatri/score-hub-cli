@@ -11,8 +11,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ShantKhatri/score-hub-cli/internal/index"
 	gh "github.com/ShantKhatri/score-hub-cli/internal/resolver/github"
@@ -34,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	res := gh.NewGitHubResolver("")
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 	ctx := context.Background()
 
 	computedChecksums := make(map[string]string)
@@ -45,11 +48,32 @@ func main() {
 	for _, p := range idx.Provisioners {
 		for _, v := range p.Variants {
 			for _, plat := range v.Platforms {
+				if plat.Path == "" {
+					continue
+				}
 				existingChecksums[plat.Path] = plat.Checksum
 
-				body, err := res.FetchFile(ctx, plat.Path)
+				url := gh.DefaultUpstreamBaseURL + plat.Path
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "FAIL: %s: %v\n", plat.Path, err)
+					continue
+				}
+				resp, err := httpClient.Do(req)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FAIL: %s: %v\n", plat.Path, err)
+					continue
+				}
+
+				body, err := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FAIL: %s: %v\n", plat.Path, err)
+					continue
+				}
+
+				if resp.StatusCode != http.StatusOK {
+					fmt.Fprintf(os.Stderr, "FAIL: %s: HTTP %d\n", plat.Path, resp.StatusCode)
 					continue
 				}
 

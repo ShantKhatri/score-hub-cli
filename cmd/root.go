@@ -48,6 +48,7 @@ func init() {
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(newRegistryCmd())
 }
 
 var versionCmd = &cobra.Command{
