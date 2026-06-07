@@ -10,8 +10,97 @@ import (
 	"github.com/fatih/color"
 	"github.com/ShantKhatri/score-hub-cli/internal/index"
 	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
+	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
 )
 
+// PrintSearchResultsSummary prints search results from ProvisionerSummary slices.
+// Used by the search command with the new Resolver.Search() interface.
+func PrintSearchResultsSummary(results []resolver.ProvisionerSummary, query string, jsonOut bool) {
+	if jsonOut {
+		printSummaryJSON(results)
+		return
+	}
+	if len(results) == 0 {
+		fmt.Println("No provisioners found.")
+		return
+	}
+
+	// If no query was provided, group by category
+	if query == "" {
+		printSummaryGroupedByCategory(results)
+		return
+	}
+
+	fmt.Printf("%-22s %-14s %-16s %-10s %s\n",
+		"NAME", "CATEGORY", "PLATFORMS", "VARIANTS", "VERSION")
+	fmt.Println(strings.Repeat("─", 75))
+	for _, p := range results {
+		platforms := strings.Join(p.Platforms, ", ")
+		fmt.Printf("%-22s %-14s %-16s %-10d %s\n",
+			p.Name, p.Category, platforms, p.Variants, p.Version)
+	}
+	fmt.Printf("\n%d result(s). Run 'score-hub info <name>' for details.\n", len(results))
+}
+
+func printSummaryGroupedByCategory(results []resolver.ProvisionerSummary) {
+	categories := make(map[string][]resolver.ProvisionerSummary)
+	var categoryOrder []string
+	for _, p := range results {
+		cat := p.Category
+		if cat == "" {
+			cat = "other"
+		}
+		if _, exists := categories[cat]; !exists {
+			categoryOrder = append(categoryOrder, cat)
+		}
+		categories[cat] = append(categories[cat], p)
+	}
+	sort.Strings(categoryOrder)
+
+	bold := color.New(color.Bold)
+	dim := color.New(color.Faint)
+
+	for i, cat := range categoryOrder {
+		if i > 0 {
+			fmt.Println()
+		}
+		bold.Printf("[%s]\n", cat)
+		for _, p := range categories[cat] {
+			platforms := strings.Join(p.Platforms, ", ")
+			fmt.Printf("  %-22s %s", p.Name, p.DisplayName)
+			dim.Printf("  (%s)\n", platforms)
+		}
+	}
+	fmt.Printf("\n%d provisioner(s) available. Run 'score-hub info <name>' for details.\n", len(results))
+}
+
+func printSummaryJSON(results []resolver.ProvisionerSummary) {
+	type searchResult struct {
+		Name         string   `json:"name"`
+		DisplayName  string   `json:"displayName"`
+		Category     string   `json:"category"`
+		Platforms    []string `json:"platforms"`
+		VariantCount int      `json:"variantCount"`
+		Version      string   `json:"latestVersion"`
+	}
+	var out []searchResult
+	for _, p := range results {
+		out = append(out, searchResult{
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Category:     p.Category,
+			Platforms:    p.Platforms,
+			VariantCount: p.Variants,
+			Version:      p.Version,
+		})
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(out)
+}
+
+// PrintSearchResults prints search results from full Provisioner objects.
+// Kept for backward compatibility with code that works with []index.Provisioner directly.
 func PrintSearchResults(results []index.Provisioner, query string, jsonOut bool) {
 	if jsonOut {
 		printSearchJSON(results)
