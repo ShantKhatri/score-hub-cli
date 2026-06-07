@@ -26,6 +26,16 @@ type LockEntry struct {
 	Filename      string `yaml:"filename"`
 	Checksum      string `yaml:"checksum"`
 	InstalledAt   string `yaml:"installedAt"`
+	Registry      string `yaml:"registry,omitempty"`
+	RegistryURL   string `yaml:"registryURL,omitempty"`
+	DownloadURL   string `yaml:"downloadURL,omitempty"` // absolute file URL (empty for community/path-based)
+}
+
+func (e LockEntry) EffectiveRegistry() string {
+	if e.Registry == "" {
+		return "public"
+	}
+	return e.Registry
 }
 
 func New() *LockFile {

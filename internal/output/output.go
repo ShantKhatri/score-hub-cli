@@ -7,14 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/ShantKhatri/score-hub-cli/internal/index"
 	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
 	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
+	"github.com/fatih/color"
 )
 
-// PrintSearchResultsSummary prints search results from ProvisionerSummary slices.
-// Used by the search command with the new Resolver.Search() interface.
 func PrintSearchResultsSummary(results []resolver.ProvisionerSummary, query string, jsonOut bool) {
 	if jsonOut {
 		printSummaryJSON(results)
@@ -25,7 +23,6 @@ func PrintSearchResultsSummary(results []resolver.ProvisionerSummary, query stri
 		return
 	}
 
-	// If no query was provided, group by category
 	if query == "" {
 		printSummaryGroupedByCategory(results)
 		return
@@ -99,8 +96,6 @@ func printSummaryJSON(results []resolver.ProvisionerSummary) {
 	enc.Encode(out)
 }
 
-// PrintSearchResults prints search results from full Provisioner objects.
-// Kept for backward compatibility with code that works with []index.Provisioner directly.
 func PrintSearchResults(results []index.Provisioner, query string, jsonOut bool) {
 	if jsonOut {
 		printSearchJSON(results)

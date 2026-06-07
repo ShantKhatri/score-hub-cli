@@ -1,6 +1,3 @@
-// Package index defines the data model for the score-hub index.
-// The index maps community-provisioners content to named, versioned,
-// described entries that the CLI can search, resolve, and install.
 package index
 
 import "time"
@@ -40,11 +37,14 @@ type Variant struct {
 	Prerequisites []string            `yaml:"prerequisites,omitempty"`
 }
 
-// Platform is platform-specific provisioner file metadata
 type Platform struct {
-	Path     string `yaml:"path"`     // Relative path in community-provisioners
-	Filename string `yaml:"filename"` // Original filename to preserve on install
-	Checksum string `yaml:"checksum"` // sha256:hex checksum of file content
+	Path     string `yaml:"path,omitempty"` // Relative path in community-provisioners
+	Filename string `yaml:"filename"`       // Original filename to preserve on install
+	Checksum string `yaml:"checksum"`       // sha256:hex checksum of file content
+
+	// Present in org-registry provisioners. Absent in community provisioners.
+	// FetchFile checks this field first; falls back to Path if empty.
+	DownloadURL string `yaml:"downloadURL,omitempty"`
 }
 
 // Version represents a version entry for a provisioner
