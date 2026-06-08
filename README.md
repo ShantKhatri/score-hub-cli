@@ -86,6 +86,17 @@ score-hub list
 score-hub list --json
 ```
 
+### `score-hub registry [command]`
+
+Manage multiple provisioner registries. By default, the `public` registry is configured.
+
+```bash
+score-hub registry add <org_name> <url>
+score-hub registry list
+score-hub registry show <org_name>
+score-hub registry remove <org_name>
+```
+
 ## Platform Detection
 
 score-hub automatically detects your Score platform in this priority:
@@ -104,15 +115,25 @@ score-hub creates a `.score-hub.lock` file tracking installed provisioners with 
 
 ## Configuration
 
-Optional config at `~/.score-hub/config.yaml`:
+Optional config at `~/.score-hub/config.yaml`. Supports multiple named registries:
 
 ```yaml
 apiVersion: score-hub/v1alpha1
-registry: https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml
 platform: auto  # k8s | compose | auto
+defaultRegistry: public
+registries:
+  public:
+    url: https://raw.githubusercontent.com/ShantKhatri/score-hub-cli/main/cmd/index.yaml
+  myorg:
+    url: https://internal.company.com/index.yaml
 cache:
   ttl: 1h
   dir: ~/.score-hub/cache/
+```
+
+Environment variables can also be used to add or override registries (useful for CI/CD):
+```bash
+export SCORE_HUB_REGISTRY_URLS="myorg=https://...,internal=https://..."
 ```
 
 ## Global Flags
@@ -122,7 +143,7 @@ cache:
 --json               Output in JSON format
 --no-cache           Skip local index cache, fetch fresh
 --verbose            Verbose output
---registry string    Override registry URL
+--registry string    Override registry (accepts alias or direct URL)
 ```
 
 ## Available Provisioners
@@ -143,10 +164,10 @@ cache:
 
 ## Architecture
 
-score-hub uses a **Resolver** interface abstraction that decouples CLI commands from the data backend. v0.1 ships with a GitHub-backed resolver. The architecture supports future backends (local filesystem, HTTP API, private registries).
+score-hub uses a **Resolver** interface abstraction that decouples CLI commands from the data backend. The **Registry Manager** orchestrates multiple resolvers, enabling federated search across all configured registries simultaneously.
 
 ```
-score-hub CLI → Resolver Interface → GitHub (community-provisioners)
+score-hub CLI → Registry Manager → [Resolver Interface] → GitHub / HTTP / Local
 ```
 
 ## Building from Source
