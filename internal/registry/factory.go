@@ -10,6 +10,7 @@ import (
 	"github.com/ShantKhatri/score-hub-cli/internal/config"
 	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
 	gh "github.com/ShantKhatri/score-hub-cli/internal/resolver/github"
+	httppkg "github.com/ShantKhatri/score-hub-cli/internal/resolver/http"
 )
 
 func NewManager(cfg *config.Config) (*Manager, error) {
@@ -45,8 +46,13 @@ func newResolver(entry config.RegistryEntry, alias string, c *cache.Cache) (reso
 	url := entry.URL
 
 	switch {
-	case strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://"):
+	case url == config.DefaultPublicIndexURL || strings.Contains(url, "score-spec/community-provisioners"):
 		res := gh.NewGitHubResolver(c)
+		res.IndexURL = url
+		return res, nil
+
+	case strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://"):
+		res := httppkg.NewStaticResolver(c)
 		res.IndexURL = url
 		return res, nil
 
