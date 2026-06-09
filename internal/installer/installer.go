@@ -100,6 +100,8 @@ func Install(
 	skipConfirm bool,
 	noVerify bool,
 	targetDir string,
+	registryAlias string,
+	registryURL string,
 ) (*InstallResult, error) {
 	// Use the resolver to find the provisioner
 	prov, err := res.Resolve(ctx, provName)
@@ -231,6 +233,9 @@ func Install(
 		Filename:      platformData.Filename,
 		Checksum:      checksum,
 		InstalledAt:   index.NowISO(),
+		Registry:      registryAlias,
+		RegistryURL:   registryURL,
+		DownloadURL:   platformData.DownloadURL,
 	})
 	if err := lock.Save("."); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to update lock file: %v\n", err)
