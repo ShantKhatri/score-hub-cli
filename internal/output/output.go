@@ -1,6 +1,7 @@
 package output
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,11 +10,11 @@ import (
 
 	"github.com/ShantKhatri/score-hub-cli/internal/index"
 	"github.com/ShantKhatri/score-hub-cli/internal/lockfile"
-	"github.com/ShantKhatri/score-hub-cli/internal/resolver"
+	"github.com/ShantKhatri/score-hub-cli/internal/registry"
 	"github.com/fatih/color"
 )
 
-func PrintSearchResultsSummary(results []resolver.ProvisionerSummary, query string, jsonOut bool) {
+func PrintSearchResultsTagged(results []registry.TaggedResult, query string, jsonOut bool) {
 	if jsonOut {
 		printSummaryJSON(results)
 		return
@@ -28,19 +29,19 @@ func PrintSearchResultsSummary(results []resolver.ProvisionerSummary, query stri
 		return
 	}
 
-	fmt.Printf("%-22s %-14s %-16s %-10s %s\n",
-		"NAME", "CATEGORY", "PLATFORMS", "VARIANTS", "VERSION")
-	fmt.Println(strings.Repeat("─", 75))
+	fmt.Printf("%-22s %-14s %-12s %-10s %-10s %s\n",
+		"NAME", "CATEGORY", "REGISTRY", "PLATFORMS", "VARIANTS", "VERSION")
+	fmt.Println(strings.Repeat("─", 85))
 	for _, p := range results {
 		platforms := strings.Join(p.Platforms, ", ")
-		fmt.Printf("%-22s %-14s %-16s %-10d %s\n",
-			p.Name, p.Category, platforms, p.Variants, p.Version)
+		fmt.Printf("%-22s %-14s %-12s %-10s %-10d %s\n",
+			p.Name, p.Category, p.RegistryAlias, platforms, p.Variants, p.Version)
 	}
 	fmt.Printf("\n%d result(s). Run 'score-hub info <name>' for details.\n", len(results))
 }
 
-func printSummaryGroupedByCategory(results []resolver.ProvisionerSummary) {
-	categories := make(map[string][]resolver.ProvisionerSummary)
+func printSummaryGroupedByCategory(results []registry.TaggedResult) {
+	categories := make(map[string][]registry.TaggedResult)
 	var categoryOrder []string
 	for _, p := range results {
 		cat := p.Category
@@ -65,17 +66,18 @@ func printSummaryGroupedByCategory(results []resolver.ProvisionerSummary) {
 		for _, p := range categories[cat] {
 			platforms := strings.Join(p.Platforms, ", ")
 			fmt.Printf("  %-22s %s", p.Name, p.DisplayName)
-			dim.Printf("  (%s)\n", platforms)
+			dim.Printf("  (%s | %s)\n", p.RegistryAlias, platforms)
 		}
 	}
 	fmt.Printf("\n%d provisioner(s) available. Run 'score-hub info <name>' for details.\n", len(results))
 }
 
-func printSummaryJSON(results []resolver.ProvisionerSummary) {
+func printSummaryJSON(results []registry.TaggedResult) {
 	type searchResult struct {
 		Name         string   `json:"name"`
 		DisplayName  string   `json:"displayName"`
 		Category     string   `json:"category"`
+		Registry     string   `json:"registry"`
 		Platforms    []string `json:"platforms"`
 		VariantCount int      `json:"variantCount"`
 		Version      string   `json:"latestVersion"`
@@ -86,6 +88,7 @@ func printSummaryJSON(results []resolver.ProvisionerSummary) {
 			Name:         p.Name,
 			DisplayName:  p.DisplayName,
 			Category:     p.Category,
+			Registry:     p.RegistryAlias,
 			Platforms:    p.Platforms,
 			VariantCount: p.Variants,
 			Version:      p.Version,
@@ -180,7 +183,7 @@ func printSearchJSON(results []index.Provisioner) {
 	enc.Encode(out)
 }
 
-func PrintInfo(p *index.Provisioner, jsonOut bool) {
+func PrintInfo(p *index.Provisioner, registryAlias, registryURL string, jsonOut bool) {
 	if jsonOut {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -195,9 +198,12 @@ func PrintInfo(p *index.Provisioner, jsonOut bool) {
 	bold.Printf("\n%s", p.Name)
 	dim.Printf(" — ")
 	cyan.Println(p.DisplayName)
+	fmt.Printf("Registry:  %s (%s)\n", registryAlias, registryURL)
 	fmt.Printf("Category:  %s\n", p.Category)
 	fmt.Printf("Platforms: %s\n", strings.Join(p.PlatformNames(), ", "))
-	fmt.Printf("Upstream:  %s\n", p.Upstream)
+	if p.Upstream != "" {
+		fmt.Printf("Upstream:  %s\n", p.Upstream)
+	}
 	fmt.Printf("Version:   %s (%s)\n", p.LatestVersion(), p.LatestDate())
 	fmt.Println()
 
@@ -303,7 +309,7 @@ func PrintInstallSuccess(name, version, variant, platform, installPath, resType 
 	fmt.Printf("Then run: %s generate score.yaml\n", tool)
 }
 
-func PrintList(entries []lockfile.LockEntry, idx *index.Index, jsonOut bool) {
+func PrintList(entries []lockfile.LockEntry, mgr *registry.Manager, jsonOut bool) {
 	if jsonOut {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -318,21 +324,24 @@ func PrintList(entries []lockfile.LockEntry, idx *index.Index, jsonOut bool) {
 	}
 	cwd, _ := os.Getwd()
 	fmt.Printf("Installed provisioners in %s\n\n", cwd)
-	fmt.Printf("%-22s %-12s %-10s %-10s %s\n",
-		"NAME", "VARIANT", "PLATFORM", "VERSION", "STATUS")
-	fmt.Println(strings.Repeat("─", 70))
+	fmt.Printf("%-22s %-12s %-12s %-10s %-10s %s\n",
+		"NAME", "REGISTRY", "VARIANT", "PLATFORM", "VERSION", "STATUS")
+	fmt.Println(strings.Repeat("─", 85))
 	green := color.New(color.FgGreen)
 	yellow := color.New(color.FgYellow)
 	for _, e := range entries {
 		status := green.Sprint("✓ installed")
-		if idx != nil {
-			p := idx.FindProvisioner(e.Name)
-			if p != nil && p.LatestVersion() != e.Version {
-				status = yellow.Sprintf("↑ update available (%s)", p.LatestVersion())
+		if mgr != nil {
+			// Find update in the specific registry it was installed from
+			regAlias := e.EffectiveRegistry()
+			if res, err := mgr.ResolverFor(regAlias); err == nil {
+				if p, err := res.Resolve(context.Background(), e.Name); err == nil && p.LatestVersion() != e.Version {
+					status = yellow.Sprintf("↑ update available (%s)", p.LatestVersion())
+				}
 			}
 		}
-		fmt.Printf("%-22s %-12s %-10s %-10s %s\n",
-			e.Name, e.Variant, e.Platform, e.Version, status)
+		fmt.Printf("%-22s %-12s %-12s %-10s %-10s %s\n",
+			e.Name, e.EffectiveRegistry(), e.Variant, e.Platform, e.Version, status)
 	}
 	fmt.Printf("\n%d provisioner(s) installed.\n", len(entries))
 }
